@@ -1,4 +1,5 @@
 #include "MeMegaPi.h"
+MeLineFollower lineFinder;
 
 // Initialize motors
 MeMegaPiDCMotor motor1(PORT1A);
@@ -9,39 +10,32 @@ MeMegaPiDCMotor motor4(PORT2B);
 // Set motor speed
 uint8_t motorSpeed = 100;
 
-// Pins where the line sensors are connected
-const int lineSensor1Pin = A9;
-const int lineSensor2Pin = A10;
-
 void setup() {
-  // Set the line sensor pins as inputs
-  pinMode(lineSensor1Pin, INPUT);
-  pinMode(lineSensor2Pin, INPUT);
+  lineFinder.setpin(A9,A10);
 }
 
 void loop() {
   // Read the state of the line sensors
-  int sensor1State = digitalRead(lineSensor1Pin);
-  int sensor2State = digitalRead(lineSensor2Pin);
+  int sensorState = lineFinder.readSensors();
 
   // If both sensors are over the line, move forward
-  if(sensor1State == HIGH && sensor2State == HIGH) {
+  if(sensorState == S1_IN_S2_IN) {
     motor1.run(motorSpeed);
     motor2.run(motorSpeed);
-    motor3.run(motorSpeed);
-    motor4.run(motorSpeed);
+    motor3.run(-motorSpeed);
+    motor4.run(-motorSpeed);
   }
   // If the left sensor is over the line, turn left
-  else if(sensor1State == HIGH && sensor2State == LOW) {
-    motor1.run(-motorSpeed);
-    motor2.run(-motorSpeed);
+  else if(sensorState == S1_IN_S2_OUT) {
+    motor1.run(motorSpeed);
+    motor2.run(motorSpeed);
     motor3.run(motorSpeed);
     motor4.run(motorSpeed);
   }
   // If the right sensor is over the line, turn right
-  else if(sensor1State == LOW && sensor2State == HIGH) {
-    motor1.run(motorSpeed);
-    motor2.run(motorSpeed);
+  else if(sensorState == S1_OUT_S2_IN) {
+    motor1.run(-motorSpeed);
+    motor2.run(-motorSpeed);
     motor3.run(-motorSpeed);
     motor4.run(-motorSpeed);
   }
