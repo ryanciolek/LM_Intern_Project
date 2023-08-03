@@ -28,7 +28,7 @@ uint8_t impactCount = 0;
 uint8_t wasTouched = 0;
 
 //For Obstacle Detection
-bool movedRight = true;
+bool movedRight = false;
 
 void moveForward(int speed) {
         motor1.reset(PORT1A);
