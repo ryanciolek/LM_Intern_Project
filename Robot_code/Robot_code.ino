@@ -19,12 +19,16 @@ uint8_t lowSpeed = 75;
 
 //Mode 0 = Line Tracing
 //Mode 1 = Extraction Zone/Obstacle Detection
-//Mode 2 = Gesture Recognition
+//Mode 2 = Gesture/Read Mode
+//Mode 3 = Data Withdraw
 uint8_t mode = 0;
 
 //Counter for Impact Switch and Touch Check
 uint8_t impactCount = 0;
 uint8_t wasTouched = 0;
+
+//For Obstacle Detection
+bool movedRight = true;
 
 void moveForward(int speed) {
         motor1.reset(PORT1A);
@@ -106,6 +110,18 @@ void setLEDColors(int red, int green, int blue) {
       LED2.show();
 }
 
+void wrongWave() {
+        setLEDColors(255,0,0);
+        delay(750);
+}
+
+void correctWave() {
+        setLEDColors(0,255,0);
+        delay(750);
+        setLEDColors(255,255,255);
+        delay(750);
+}
+
 void setup() {
   //Define Pins of Objects
   lineFinder.setpin(A9, A10);
@@ -131,14 +147,19 @@ void loop() {
       }
       impactCount = 0;
     }
+    if(mode == 3) {
+      if(impactCount == 1) {
+        setLEDColors(255,255,255);
+      } else if(impactCount == 2) {
+        mode = 0;
+      }
+    }
     }
   }
 
   switch (mode) {
     case 0:
-      // if(test==1) {
-      //   moveForward(highSpeed);
-      // }
+
       //Set Initial LED Color to White
       setLEDColors(255, 255, 255);
 
@@ -148,11 +169,11 @@ void loop() {
       }
       // If the left sensor is over the line, turn left
       else if (ltSensorState == S1_IN_S2_OUT) {
-        turnLeft(highSpeed);
+        turnLeft(lowSpeed);
       }
       // If the right sensor is over the line, turn right
       else if (ltSensorState == S1_OUT_S2_IN) {
-        turnRight(highSpeed);
+        turnRight(lowSpeed);
       }
       // If neither sensor is over the line, stop
       else {
@@ -160,33 +181,80 @@ void loop() {
       }
       break;
 
+    //Obstacle Detection Mode
     case 1:
-      // Set LEDs to green
-      setLEDColors(0, 255, 0);
+      // Set LEDs to cyan
+      setLEDColors(0, 100, 100);
 
-      //Once past white sheet, stop vehicle
+      //Once past white sheet, stop vehicle and wait for wave
       if (ltSensorState == S1_IN_S2_IN) {
+        mode = 2;
         stop();
+        delay(3000);
       }
 
-      //Still need to add driving aspect
-      if (US1.readSensor() == 0 || US2.readSensor() == 0 || US3.readSensor() == 0) {
+      if (ltSensorState == S1_OUT_S2_OUT) {
+        if (US1.readSensor() == 0 || US2.readSensor() == 0 || US3.readSensor() == 0) {
           if(US1.readSensor() == 0 || (US1.readSensor() == 0 && US2.readSensor() == 0)) {
             moveRight(highSpeed);
-            delay(1000);
+            movedRight = true;
+            delay(750);
             break;
           }
           if(US3.readSensor() == 0 || (US3.readSensor() == 0 && US2.readSensor() == 0)) {
             moveLeft(highSpeed);
-            delay(1000);
+            movedRight = false;
+            delay(750);
             break;
           }
-      } else {
-        moveForward(lowSpeed);
+          if(US3.readSensor() == 0 && (US3.readSensor() == 0 && US2.readSensor() == 0)) {
+            if(movedRight == true) {
+              moveLeft(highSpeed);
+            } else if(movedRight == false) {
+              moveRight(highSpeed);
+            }
+            delay(750);
+            break;
+          }
+        } else {
+          moveForward(lowSpeed);
+        }
       }
       
+      
       break;
+
     case 2:
-      //Gesture Recognition
+      //Read Mode
+        setLEDColors(255,255,255); 
+        delay(500);
+        setLEDColors(0,0,0);
+        delay(500);
+        if(US1.readSensor() == 0) {
+          if(US2.readSensor() == 0) {
+            if(US3.readSensor() == 0) {
+              setLEDColors(0,255,0);
+              mode = 3;
+              wasTouched = 0;
+              impactCount = 0;
+            }
+          }
+        } else if(US3.readSensor() == 0 || US2.readSensor() == 0) {
+          setLEDColors(255,0,0);
+          delay(1500);
+        }
+    break;
+
+    case 3:
+      //Data Extraction Mode
+      if ((LS1.touched() && LS2.touched()) || wasTouched == 1) {
+        stop();
+        wasTouched = 1;
+        delay(3000);
+        if (LS1.touched() && LS2.touched()) { 
+          mode = 0;
+        }
+      }
+    break;
   }
 }
